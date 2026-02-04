@@ -1,0 +1,62 @@
+---
+title: "plot1"
+author: "AM"
+date: "2026-02-04"
+output: html_document
+---
+
+fips: A five-digit number (represented as a string) indicating the U.S. county
+
+SCC: The name of the source as indicated by a digit string (see source code classification table)
+
+Pollutant: A string indicating the pollutant
+
+Emissions: Amount of PM2.5 emitted, in tons
+
+type: The type of source (point, non-point, on-road, or non-road)
+
+year: The year of emissions recorded
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
+
+#Read in the actual data
+nei <- readRDS("summarySCC_PM25.rds")
+
+#Make all the names lower case since I think it's annoying
+names(nei) <- tolower(names(nei))
+
+#Read in table to link SCC strings to source names
+scc <- readRDS("Source_Classification_Code.rds")
+```
+
+Have total emissions from PM2.5 decreased in the United States from 1999 to 2008? Using the base plotting system, make a plot showing the total PM2.5 emission from all sources for each of the years 1999, 2002, 2005, and 2008.
+
+```{r}
+
+#Need to use the emissions variable, since that's total emissions
+#If I'm doing it from all sources, can ignore stratifying by source, county, etc. 
+#Should just be able to plot out the sum of all emissions by year 
+
+#------------Step 1: Separate out by year and take means (tapply) ------------#
+emimeans <- tapply(nei$emissions, nei$year, mean, na.rm = TRUE) #Oh whoa. This worked
+
+#Double check output with dplyr
+nei %>% group_by(year) %>% summarize(meanemissions = mean(emissions, na.rm = TRUE))
+
+#---------------------------Step 2: Plot the points ---------------------------#
+
+#Maybe a barplot would be better than a scatterplot since it's one value / year
+barplot(height = emimeans, #mean emission value stored in this vector
+        names.arg = as.character(unique(nei$year)),
+        col = brewer.pal(4, "Set3"),
+        xlab = "Year",
+        ylab = "Emissions (tons)",
+        ylim = c(0, 8))
+
+dev.copy(png, file = "plot1.png")
+dev.off()
+```
+
