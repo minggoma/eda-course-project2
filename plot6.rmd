@@ -1,0 +1,64 @@
+---
+title: "plot6"
+author: "AM"
+date: "2026-02-04"
+output: html_document
+---
+fips: A five-digit number (represented as a string) indicating the U.S. county
+
+SCC: The name of the source as indicated by a digit string (see source code classification table)
+
+Pollutant: A string indicating the pollutant
+
+Emissions: Amount of PM2.5 emitted, in tons
+
+type: The type of source (point, non-point, on-road, or non-road)
+
+year: The year of emissions recorded
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
+
+#Read in the actual data
+nei <- readRDS("summarySCC_PM25.rds")
+
+#Make all the names lower case since I think it's annoying
+names(nei) <- tolower(names(nei))
+
+#Read in table to link SCC strings to source names
+scc <- readRDS("Source_Classification_Code.rds")
+```
+
+Compare emissions from motor vehicle sources in Baltimore City with emissions from motor vehicle sources in Los Angeles County, California (fips == "06037"). Which city has seen greater changes over time in motor vehicle emissions?
+
+```{r}
+vehicle <- unique(scc$EI.Sector)[21:24] #Get only the 21-24 rows
+
+sccvehicle <- scc %>% filter(EI.Sector %in% vehicle) #Get only the scc rows for vehicles
+```
+
+```{r}
+#Subset out Baltimore and LA County
+
+sub <- nei %>% filter(fips == "06037" | fips == "24510")
+
+sub$fips <- factor(sub$fips,
+                   levels = c("24510", "06037"),
+                   labels = c("Baltimore", "Los Angeles"))
+
+sub$year <- factor(sub$year)
+
+ggplot(data = sub, aes(x = year, y = emissions)) +
+  stat_summary(fun = mean, geom = "bar", aes(fill = year)) + 
+  labs(title = "Vehicle Emissions by Year by City") +
+  xlab("Year") +
+  ylab("Vehicle Emissions (tons)") +
+  facet_wrap(.~ fips) + 
+  theme_minimal()
+
+ggsave(filename = "plot6.png")
+```
+
+
