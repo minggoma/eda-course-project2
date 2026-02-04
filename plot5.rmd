@@ -1,0 +1,72 @@
+---
+title: "plot5"
+author: "AM"
+date: "2026-02-04"
+output: html_document
+---
+
+fips: A five-digit number (represented as a string) indicating the U.S. county
+
+SCC: The name of the source as indicated by a digit string (see source code classification table)
+
+Pollutant: A string indicating the pollutant
+
+Emissions: Amount of PM2.5 emitted, in tons
+
+type: The type of source (point, non-point, on-road, or non-road)
+
+year: The year of emissions recorded
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
+
+#Read in the actual data
+nei <- readRDS("summarySCC_PM25.rds")
+
+#Make all the names lower case since I think it's annoying
+names(nei) <- tolower(names(nei))
+
+#Read in table to link SCC strings to source names
+scc <- readRDS("Source_Classification_Code.rds")
+```
+
+How have emissions from motor vehicle sources changed from 1999–2008 in Baltimore City?
+
+```{r}
+#Let's subset nei again
+
+baltimore <- nei %>% filter(fips == "24510")
+```
+
+Mobile - On-Road Gasoline Light Duty Vehicles      
+Mobile - On-Road Gasoline Heavy Duty Vehicles     
+Mobile - On-Road Diesel Light Duty Vehicles        
+Mobile - On-Road Diesel Heavy Duty Vehicles  
+
+These are rows 21-24 in scc$EI.Sector
+
+```{r}
+
+vehicle <- unique(scc$EI.Sector)[21:24] #Get only the 21-24 rows
+
+sccvehicle <- scc %>% filter(EI.Sector %in% vehicle) #Get only the scc rows for vehicles
+
+#Subset the baltimore data to just have the vehicle data
+bmorevehicle <- baltimore %>% filter(scc %in% sccvehicle$SCC)
+
+#I now have a data frame with just the rows for vehicle emissions
+#Just need to plot the emissions now
+
+bmorevehicle$year <- factor(bmorevehicle$year)
+
+ggplot(data = bmorevehicle, aes(x = year, y = emissions)) +
+  stat_summary(fun = mean, geom = "bar", aes(fill = year)) +
+  xlab("Year") +
+  ylab("Vehicle Emissions (tons)") +
+  labs(title = "Vehicle Emissions (tons) by Year") +
+  theme_minimal() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+```
+
