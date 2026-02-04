@@ -1,0 +1,56 @@
+---
+title: "plot3"
+author: "AM"
+date: "2026-02-04"
+output: html_document
+---
+
+fips: A five-digit number (represented as a string) indicating the U.S. county
+
+SCC: The name of the source as indicated by a digit string (see source code classification table)
+
+Pollutant: A string indicating the pollutant
+
+Emissions: Amount of PM2.5 emitted, in tons
+
+type: The type of source (point, non-point, on-road, or non-road)
+
+year: The year of emissions recorded
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
+
+#Read in the actual data
+nei <- readRDS("summarySCC_PM25.rds")
+
+#Make all the names lower case since I think it's annoying
+names(nei) <- tolower(names(nei))
+
+#Read in table to link SCC strings to source names
+scc <- readRDS("Source_Classification_Code.rds")
+```
+
+Of the four types of sources indicated by the type (point, nonpoint, onroad, nonroad) variable, which of these four sources have seen decreases in emissions from 1999–2008 for Baltimore City? Which have seen increases in emissions from 1999–2008? Use the ggplot2 plotting system to make a plot answer this question.
+
+```{r}
+baltimore <- subset(nei, fips == "24510") #Subset out baltimore 
+baltimore$type <- factor(baltimore$type) 
+baltimore$year <- factor(baltimore$year)
+ 
+pal <- brewer.pal(4, "Set3")
+
+#Graph it
+
+ggplot(data = baltimore, 
+       aes(x = year, y = emissions)) + 
+  stat_summary(fun = mean, geom = "bar", aes(fill = year)) + 
+  facet_wrap(~ type, scales = "free") +
+  xlab("Year") +
+  ylab("Emissions (Tons)") + 
+  scale_fill_manual(values = pal) +
+  theme_minimal() +
+  theme(panel.grid = element_blank())
+```
+
