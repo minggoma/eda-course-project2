@@ -1,0 +1,91 @@
+---
+title: "plot4"
+author: "AM"
+date: "2026-02-04"
+output: html_document
+---
+fips: A five-digit number (represented as a string) indicating the U.S. county
+
+SCC: The name of the source as indicated by a digit string (see source code classification table)
+
+Pollutant: A string indicating the pollutant
+
+Emissions: Amount of PM2.5 emitted, in tons
+
+type: The type of source (point, non-point, on-road, or non-road)
+
+year: The year of emissions recorded
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
+
+#Read in the actual data
+nei <- readRDS("summarySCC_PM25.rds")
+
+#Make all the names lower case since I think it's annoying
+names(nei) <- tolower(names(nei))
+
+#Read in table to link SCC strings to source names
+scc <- readRDS("Source_Classification_Code.rds")
+```
+
+Across the United States, how have emissions from coal combustion-related sources changed from 1999–2008?
+```{r}
+#Which code corresponds to coal combustion-related sources
+
+#Let's just find every row that mentions coal
+
+#Tell apply to loop over scc, and to go by row and look at each column
+#use any() to collapse down the result from grepl() so that if any column is TRUE
+#The row receives a value of TRUE and can be kept after subsetting
+
+res <- apply(scc, 1, function(x) any(grepl("[Cc]oal",x))) 
+
+coal <- scc[res, ]
+
+#the coal data frame just has every row that contains the word "Coal" or "coal"
+#It looks like EI.Sector might give me what I'm looking for
+
+#Let me just do grepl() on EI.Sector and see what is coal-related
+unique(scc[grepl("[Cc]oal", scc$EI.Sector), ]$EI.Sector)
+```
+
+After doing some exploration with grepl(), it looks like the variable I need to use is EI.Sector - this should tell me anything that's related to coal combustion. There are three variables:
+
+Fuel Comb - Electric Generation - Coal      
+Fuel Comb - Industrial Boilers, ICEs - Coal
+Fuel Comb - Comm/Institutional - Coal   
+
+```{r}
+
+#Create a separate data frame that just has the coal combustion related rows
+
+coalcomb <- scc[grepl("[Cc]oal", scc$EI.Sector), ]
+coalscc <- coalcomb$SCC #99 different SCC values for coal combustion
+
+
+#Each EI.Sector is connected to an SCC value
+#I can get a list of the SCC values that are associated with each coal combustion
+#I can then subset the dataframe to only include the scc values %in% that vector
+
+rm(coal)
+
+coal <- nei[nei$scc %in% coalscc, ] #Get only the rows that are associated with coal combustion
+
+#Ok cool. I have a data frame that has just the rows I want
+
+#Now I need to plot their emission data by year
+coal$year <- factor(coal$year)
+
+ggplot(coal, aes(x = year, y= emissions)) +
+  stat_summary(fun = mean, geom = "bar", aes(fill = year)) + 
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2) +
+  xlab("Year") +
+  ylab("Emissions from Coal Combustion") +
+  labs(title = "Coal Combustion Emissions vs. Year") +
+  theme_minimal()
+
+```
+
